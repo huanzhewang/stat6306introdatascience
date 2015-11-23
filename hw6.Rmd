@@ -1,0 +1,70 @@
+---
+title: "Untitled"
+author: "huanzhe wang"
+date: "November 22, 2015"
+output: html_document
+---
+##Introduction: We try to figure out How the positive self-esteem changes base on log annual income ,intelligence, years of education, and gender such four factor to alter. We also try to compare some classifiers to see which one is best.
+
+```{r}
+library(Sleuth3)
+library(MASS)
+library(rpart)
+```
+
+```{r}
+data(ex1223)
+ex1223$Esteem1[ex1223$Esteem1==1]<- 1
+ex1223$Esteem1[ex1223$Esteem1==2]<- 0
+ex1223$Esteem1[ex1223$Esteem1==3]<- 0
+ex1223$Esteem1[ex1223$Esteem1==4]<- 0
+ex1223$Income2005<- log(ex1223$Income2005)
+```
+##I randomly choose 2/3 data as a training data and  1/3 data as test data from data ex1223
+```{r}
+set.seed(1234)
+nrow(ex1223)
+round(nrow(ex1223)*2/3)
+sample<- sample(1:2584,1723, replace=F)
+traindata<- ex1223[sample,]
+testdata<- ex1223[-sample,]
+```
+##i run a logistics regression. logit=-2.766617+0.175738income2005+0.007593AFQT+0.072442Educ-0.199137gendermale
+```{r}
+ex1223glm<- glm(Esteem1~Income2005+AFQT+Educ+Gender,data=traindata,family="binomial")
+summary(ex1223glm)
+```
+##We apply this model to test data to predict the probability of sel-esteem. We define the pro>0.5 sel-esteem is 1 otherwise is 0.
+```{r}
+prob<- predict(ex1223glm,testdata,type="response")
+nrow(testdata)
+pred<- rep("0",861)
+pred[prob>0.5]<- "1"
+table(pred,testdata$Esteem1)
+```
+##I creat a confusion table. we sum diagonal 103+432=535 then divide by total is 535/861=0.62. 0.62 is means 62% match actual data.
+```{r}
+ex1223lda<- lda(Esteem1~Income2005+AFQT+Educ+Gender, data=traindata)
+pred2<- predict(ex1223lda,testdata)$class
+table(pred2,testdata$Esteem1)
+```
+##Use Lda methed to bulid a classifier. Then create another confusion table. find out prob it is exactly same as first one.
+
+```{r}
+tree<- rpart(Esteem1~Income2005+AFQT+Educ+Gender, data=traindata, method="class")
+tree
+```
+##we build a classification tree. we find only educ and afqt is classfication vriable.
+
+```{r}
+ex1223glm2<- glm(Esteem1~AFQT+Educ,data=traindata,family="binomial")
+prob2<- predict(ex1223glm2,testdata,type="response")
+nrow(testdata)
+pred3<- rep("0",861)
+pred3[prob2>0.5]<- "1"
+table(pred3,testdata$Esteem1)
+```
+## We rerun the logistic regression , we only use educ and afqt to make a classfication table. we find the prediction is 61.4%.
+
+##Conclusion : base on test and table no matter we use four vriable or two vriable p_value is almost same. very close. So may use two vriable is better and convenient
+
